@@ -1,3 +1,327 @@
 <!DOCTYPE html>
-    
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste API Donuz</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #007bff;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+        h1 { text-align: center; }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .forms-container {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .response-container {
+            flex: 1.5;
+            min-width: 320px;
+        }
+        form, .form-section {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        fieldset {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        legend {
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="email"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; /* Garante que o padding não afete a largura */
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.secondary {
+            background-color: #6c757d;
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        #response-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 200px;
+            white-space: pre-wrap; /* Garante a quebra de linha no JSON */
+            word-wrap: break-word;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Frontend - Desafio Donuz</h1>
+
+    <div class="main-container">
+        
+        <div class="forms-container">
+            <div class="form-section">
+                <h2>👤 Clientes</h2>
+
+                <form id="form-create-client">
+                    <legend><strong>Cadastrar Novo Cliente</strong></legend>
+                    <input type="text" id="name" placeholder="Nome" required>
+                    <input type="email" id="email" placeholder="Email" required>
+                    <button type="submit">Cadastrar</button>
+                </form>
+
+                <hr>
+
+                <form id="form-operate-client">
+                    <legend><strong>Operar Cliente (por ID)</strong></legend>
+                    <input type="number" id="client_id_op" placeholder="ID do Cliente" required>
+                    
+                    <div class="button-group">
+                        <button type="button" id="btn-get-client" class="secondary">Buscar por ID</button>
+                        <button type="button" id="btn-delete-client" class="danger">Excluir</button>
+                    </div>
+
+                    <fieldset id="fieldset-edit" disabled>
+                        <legend>Editar Dados (preenchido pela busca)</legend>
+                        <input type="text" id="edit_name" placeholder="Nome para editar" required>
+                        <input type="email" id="edit_email" placeholder="Email para editar" required>
+                        <button type="submit">Salvar Edição</button>
+                    </fieldset>
+                </form>
+            </div>
+
+            <div class="form-section">
+                <h2>💸 Transações</h2>
+
+                <form id="form-credit-debit">
+                    <legend><strong>Crédito / Débito</strong></legend>
+                    <input type="number" id="tx_client_id" placeholder="ID do Cliente" required>
+                    <input type="number" id="tx_amount" step="0.01" placeholder="Valor (ex: 100.50)" required>
+                    <div class="button-group">
+                        <button type="submit" data-action="credit">Adicionar Crédito</button>
+                        <button type="submit" data-action="debit">Realizar Débito</button>
+                    </div>
+                </form>
+
+                <hr>
+
+                <form id="form-transfer">
+                    <legend><strong>Transferência</strong></legend>
+                    <input type="number" id="from_client_id" placeholder="ID do Remetente (De)" required>
+                    <input type="number" id="to_client_id" placeholder="ID do Destinatário (Para)" required>
+                    <input type="number" id="transfer_amount" step="0.01" placeholder="Valor" required>
+                    <button type="submit">Transferir</button>
+                </form>
+
+                <hr>
+
+                <form id="form-balance">
+                    <legend><strong>Consultar Saldo</strong></legend>
+                    <input type="number" id="balance_client_id" placeholder="ID do Cliente" required>
+                    <button type="submit">Ver Saldo</button>
+                </form>
+            </div>
+
+        </div>
+
+        <div class="response-container">
+            <h2>Resposta da API</h2>
+            <pre id="response-output">Aguardando operação...</pre>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api.php';
+        const responseOutput = document.getElementById('response-output');
+        const editFieldset = document.getElementById('fieldset-edit');
+        const editName = document.getElementById('edit_name');
+        const editEmail = document.getElementById('edit_email');
+
+        /**
+         * Exibe a resposta formatada da API na tela.
+         */
+        function showResponse(data) {
+            responseOutput.textContent = JSON.stringify(data, null, 2);
+        }
+
+        /**
+         * Função auxiliar genérica para chamadas de API.
+         */
+        async function apiCall(action, method = 'GET', body = null, id = null) {
+            let url = `${API_URL}?action=${action}`;
+            if (id) {
+                url += `&id=${id}`;
+            }
+
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                showResponse(data);
+                return data; // Retorna os dados para uso (ex: preencher formulário)
+            } catch (error) {
+                const errorResponse = { error: 'Erro na requisição', details: error.message };
+                showResponse(errorResponse);
+                return errorResponse;
+            }
+        }
+
+        // --- Event Listeners ---
+
+        // 1. Cadastrar Cliente [cite: 6]
+        document.getElementById('form-create-client').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            await apiCall('client', 'POST', { name, email });
+            e.target.reset(); // Limpa o formulário
+        });
+
+        // 2. Buscar Cliente [cite: 6]
+        document.getElementById('btn-get-client').addEventListener('click', async () => {
+            const clientId = document.getElementById('client_id_op').value;
+            if (!clientId) {
+                alert('Por favor, insira um ID de cliente.');
+                return;
+            }
+            const data = await apiCall('client', 'GET', null, clientId);
+            
+            // Se a busca for bem-sucedida, preenche e habilita o formulário de edição
+            if (data && !data.error) {
+                editName.value = data.name;
+                editEmail.value = data.email;
+                editFieldset.disabled = false;
+            } else {
+                editName.value = '';
+                editEmail.value = '';
+                editFieldset.disabled = true;
+            }
+        });
+
+        // 3. Editar Cliente (Salvar) [cite: 6]
+        document.getElementById('form-operate-client').addEventListener('submit', async (e) => {
+            e.preventDefault(); // O submit agora é para o 'Salvar Edição'
+            const clientId = document.getElementById('client_id_op').value;
+            const name = editName.value;
+            const email = editEmail.value;
+            
+            await apiCall('client', 'PUT', { name, email }, clientId);
+            
+            // Limpa e desabilita o fieldset após a edição
+            editName.value = '';
+            editEmail.value = '';
+            editFieldset.disabled = true;
+            document.getElementById('client_id_op').value = ''; // Limpa o ID
+        });
+
+        // 4. Excluir Cliente [cite: 6]
+        document.getElementById('btn-delete-client').addEventListener('click', async () => {
+            const clientId = document.getElementById('client_id_op').value;
+            if (!clientId) {
+                alert('Por favor, insira um ID de cliente para excluir.');
+                return;
+            }
+            if (confirm(`Tem certeza que deseja excluir o cliente ID: ${clientId}?`)) {
+                await apiCall('client', 'DELETE', null, clientId);
+                document.getElementById('client_id_op').value = '';
+                editName.value = '';
+                editEmail.value = '';
+                editFieldset.disabled = true;
+            }
+        });
+
+        // 5. Crédito / Débito [cite: 7]
+        document.getElementById('form-credit-debit').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const action = e.submitter.dataset.action; // 'credit' ou 'debit'
+            const client_id = document.getElementById('tx_client_id').value;
+            const amount = parseFloat(document.getElementById('tx_amount').value);
+            
+            await apiCall(action, 'POST', { client_id: parseInt(client_id), amount });
+            e.target.reset();
+        });
+
+        // 6. Transferir [cite: 7]
+        document.getElementById('form-transfer').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const from_client_id = parseInt(document.getElementById('from_client_id').value);
+            const to_client_id = parseInt(document.getElementById('to_client_id').value);
+            const amount = parseFloat(document.getElementById('transfer_amount').value);
+            
+            await apiCall('transfer', 'POST', { from_client_id, to_client_id, amount });
+            e.target.reset();
+        });
+
+        // 7. Consultar Saldo [cite: 7]
+        document.getElementById('form-balance').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const clientId = document.getElementById('balance_client_id').value;
+            await apiCall('balance', 'GET', null, clientId);
+            e.target.reset();
+        });
+
+    </script>
+</body>
 </html>
